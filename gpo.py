@@ -38,7 +38,7 @@ def checkTuning(firstString,secondString):
 
 def processFiles(action):
 
-    directionInput = os.path.join(os.getcwd() + "/TEST")
+    directionInput = os.path.join(os.getcwd())
     directionOutput = directionInput
 
     filesToTest = []
