@@ -4,85 +4,92 @@ import os
 import shutil
 import math
 
+filesToTest = []
+errorFiles = []
+fileCount = 0
+totalFiles = 0
+tuningCounts = {}
+directionInput = os.path.join(os.getcwd())
+directionOutput = directionInput
+progress = ""
+
+
+notes = {
+    "C": [0,12,24,36,48,60],
+    "Db":[1,13,25,37,49,61],
+    "D":[2,14,26,38,50,62],
+    "Eb":[3,15,27,39,51,63],
+    "E": [4,16,28,40,52,64],
+    "F":[5,17,29,41,53,65],
+    "Gb":[6,18,30,42,54,66],
+    "G":[7,19,31,43,55,67],
+    "Ab":[8,20,32,44,56,68],
+    "A":[9,21,33,45,57,69],
+    "Bb":[10,22,34,46,58,70],
+    "B":[11,23,35,47,59,71]
+}
+
 def checkTuning(firstString,secondString):
-
-    if ("E" in firstString) and ("A" in secondString):
+    if(firstString in notes["E"] and secondString in notes["A"]):
         return "standard E"
-
-    elif ("D#" in firstString) and ("G#" in secondString):
+    elif(firstString in notes["D"]):
+        if(secondString in notes["G"]):
+            return "standard D"
+        elif(secondString in notes["A"]):
+            return "drop D"
+        else:
+            return "unknown"
+    elif(firstString in notes["Eb"] and secondString in notes["Ab"]):
         return "standard Eb"
-
-    elif ("D" in firstString) and ("G" in secondString):
-        return "standard D"
-
-    elif ("C" in firstString) and ("F" in secondString):
-        return "standard C"
-
-    elif ("B" in firstString) and ("E" in secondString):
-        return "standard B"
-
-    elif ("D" in firstString) and ("A" in secondString):
-        return "drop D"
-
-    elif ("C#" in firstString) and ("G#" in secondString):
+    elif(firstString in notes["C"]):
+        if(secondString in notes["F"]):
+            return "standard C"
+        elif(secondString in notes["G"]):
+            return "drop C"
+        else:
+            return "unknown"
+    elif(firstString in notes["B"]):
+        if(secondString in notes["E"]):
+            return "standard B"
+        elif(secondString in notes["Gb"]):
+            return "drop B"
+        else:
+            return "unknown"
+    elif(firstString in notes["Db"] and secondString in notes["Ab"]):
         return "drop Db"
-    
-    elif ("C" in firstString) and ("G" in secondString):
-        return "drop C"
-    
-    elif ("B" in firstString) and ("F#" in secondString):
-        return "drop B"
-    
     else:
         return "unknown"
 
-def processFiles(action):
 
-    directionInput = os.path.join(os.getcwd())
-    directionOutput = directionInput
 
-    filesToTest = []
-    errorFiles = []
-    fileCount = 0
-    totalFiles = 0
-    files = os.listdir(os.path.abspath(directionInput))
+def checkSong(gpFile, action):
 
-    for file in files:
-        totalFiles += 1
-        if file.endswith(('.gp5', '.gp4', '.gp3')):
-            filesToTest.append(file)
-        else:
-            errorFiles.append(file)
-
-    tuningCounts = {}
-    for gpFile in filesToTest:
-        try:
-            song = guitarpro.parse(directionInput +"/"+ gpFile)
-        except:
-            errorFiles.append(gpFile)
-
-        tracks = (track for track in song.tracks)
+    global filesToTest
+    global errorFiles
+    global fileCount
+    global totalFiles
+    global tuningCounts
+    global directionInput
+    global directionOutput
+    
+    try:
+        song = guitarpro.parse(directionInput +"/"+ gpFile)
         possibleTunings = {} 
 
-        for track in tracks:
+        for track in song.tracks:
             if (track.isPercussionTrack == False):
 
-                strings = track.strings
-
-                firstString = str(strings[len(strings) -1])
-                secondString = str(strings[len(strings) -2])
-
-                tuning = checkTuning(firstString,secondString)
+                tuning = checkTuning(track.strings[len(track.strings) -1].value,track.strings[len(track.strings) -2].value)
                 if tuning in possibleTunings:
                     possibleTunings[tuning] += 1
                 else:
                     possibleTunings[tuning] = 1         
             
         finalTuning = max(possibleTunings, key=possibleTunings.get)
-
+        
         for possibleTuning in possibleTunings:
             possibleTunings[possibleTuning] = 0
-
+        
         if tuning in tuningCounts:
             tuningCounts[tuning] += 1
         else:
@@ -91,7 +98,7 @@ def processFiles(action):
         if(action == "copy"):
 
             pathToCopy = os.path.join(directionOutput, tuning)
-
+            
             if not os.path.isdir(pathToCopy):
                 os.makedirs(pathToCopy)
             
@@ -104,13 +111,37 @@ def processFiles(action):
                 os.makedirs(pathToMove)
 
             shutil.move(directionInput +"/"+ gpFile, pathToMove)
-        
-        fileCount = fileCount + 1
-        progress = str(math.floor((fileCount / len(filesToTest))*100)) + "%"
-        print(progress, end="\r")
+    except:
+        errorFiles.append(gpFile)
 
-    print("Done!")
-    effectiveness = str(int((fileCount / totalFiles) * 100)) + "%"
+def processFiles(action):
+
+    global filesToTest
+    global errorFiles
+    global fileCount
+    global totalFiles
+    global tuningCounts
+    global directionInput
+    global directionOutput
+    global progress
+
+    tuningCounts = {}
+    files = os.listdir(os.path.abspath(directionInput))
+
+    for file in files:
+        totalFiles += 1
+        if file.endswith(('.gp5', '.gp4', '.gp3')):
+            filesToTest.append(file)
+        else:
+            errorFiles.append(file)
+
+    print("analysing / organizing files...")
+    for gpFile in filesToTest:
+        fileCount = fileCount + 1
+        hashtags = math.floor((math.floor((fileCount / len(filesToTest)) * 100)) / 5)
+        progress = "[" + str("#" * hashtags) + ("_" * (20 - hashtags)) + "]" + " " + str(math.floor((fileCount / len(filesToTest)) * 100)) + "%"
+        print(progress, end="\r")
+        checkSong(gpFile, action)
 
     errorFilesString = ""
     for file in errorFiles:
@@ -121,10 +152,7 @@ def processFiles(action):
         stringToWrite += tuning + " " + "found:     " + " " + str(tuningCounts[tuning]) + "\n"
 
     if(action == "analyze"):
-        print("\n" + stringToWrite + "\n" + "\n" +
-                "Effectiveness:      " + effectiveness + "\n" + "\n" +
-                "Couldn't analyze these:" + "\n" + "\n" +
-                errorFilesString )
+        print("\n" + stringToWrite)
 
     if(outputFile == True):
         if not os.path.isdir(directionOutput):
@@ -132,10 +160,7 @@ def processFiles(action):
         outputLog = directionOutput + "/" + "Analyzed files.txt"
 
         f = open(outputLog, "w")
-        f.write(stringToWrite + "\n" + "\n" +
-                "Effectiveness:      " + effectiveness + "\n" + "\n" +
-                "Couldn't analyze these:" + "\n" + "\n" +
-                errorFilesString )
+        f.write(stringToWrite)
         f.close()
       
 if(len(sys.argv) >= 2 and len(sys.argv) <= 3):
@@ -162,7 +187,8 @@ if(len(sys.argv) >= 2 and len(sys.argv) <= 3):
         elif(sys.argv[1] == "-A"):
             processFiles("analyze")   
 else:
-    print("Error. Use the -H argument to see how to use it")
+    outputFile = False
+    processFiles("analyze")
 
 
 

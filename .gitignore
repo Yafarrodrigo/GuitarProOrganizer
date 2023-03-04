@@ -1,2 +1,6 @@
 note values.rtf
+*.gp3
+*.gp4
+*.gp5
+*.gpx
 /__pycache__
